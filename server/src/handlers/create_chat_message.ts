@@ -1,18 +1,28 @@
 
+import { db } from '../db';
+import { chatMessagesTable } from '../db/schema';
 import { type CreateChatMessageInput, type ChatMessage } from '../schema';
 
-export async function createChatMessage(input: CreateChatMessageInput): Promise<ChatMessage> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is creating a new chat message (user or assistant)
-    // within a chat session, including optional citations for assistant responses.
+export const createChatMessage = async (input: CreateChatMessageInput): Promise<ChatMessage> => {
+  try {
+    // Generate unique message ID
     const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    
-    return Promise.resolve({
+
+    // Insert chat message record
+    const result = await db.insert(chatMessagesTable)
+      .values({
         id: messageId,
         session_id: input.session_id,
         role: input.role,
         content: input.content,
-        citations: input.citations || null,
-        created_at: new Date()
-    } as ChatMessage);
-}
+        citations: input.citations || null
+      })
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Chat message creation failed:', error);
+    throw error;
+  }
+};

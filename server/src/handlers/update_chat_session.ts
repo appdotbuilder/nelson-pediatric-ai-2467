@@ -1,15 +1,34 @@
 
+import { db } from '../db';
+import { chatSessionsTable } from '../db/schema';
 import { type UpdateChatSessionInput, type ChatSession } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export async function updateChatSession(input: UpdateChatSessionInput): Promise<ChatSession> {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is updating chat session metadata like title
-    // when users rename their conversations.
-    return Promise.resolve({
-        id: input.id,
-        user_id: 'placeholder_user',
-        title: input.title || 'Untitled Chat',
-        created_at: new Date(),
-        updated_at: new Date()
-    } as ChatSession);
-}
+export const updateChatSession = async (input: UpdateChatSessionInput): Promise<ChatSession> => {
+  try {
+    // Build update object with only provided fields
+    const updateData: { title?: string; updated_at: Date } = {
+      updated_at: new Date()
+    };
+
+    if (input.title !== undefined) {
+      updateData.title = input.title;
+    }
+
+    // Update chat session record
+    const result = await db.update(chatSessionsTable)
+      .set(updateData)
+      .where(eq(chatSessionsTable.id, input.id))
+      .returning()
+      .execute();
+
+    if (result.length === 0) {
+      throw new Error(`Chat session with id ${input.id} not found`);
+    }
+
+    return result[0];
+  } catch (error) {
+    console.error('Chat session update failed:', error);
+    throw error;
+  }
+};
